@@ -38,6 +38,7 @@ minicurso_02-embarcados/
 
 - Python básico (variáveis, `if/else`, `while`, funções)
 - Recomendado: Mini Curso 01 — Lógica Digital com ESP32
+  **[https://rogerioMB-hub.github.io/minicurso_01-embarcados](https://rogerioMB-hub.github.io/minicurso_01-embarcados)**
 
 ## Licença
 
