@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "author": "Rogério M B",
+  "author": "Rogerio M B",
   "editor": "wokwi",
   "parts": [
     {
@@ -12,10 +12,10 @@
     }
   ],
   "connections": [
-    [ "esp:TX",  "$serialMonitor:RX", "",       [] ],
-    [ "esp:RX",  "$serialMonitor:TX", "",       [] ],
-    [ "esp:4",   "esp:16",            "orange", [] ],
-    [ "esp:17",  "esp:5",             "blue",   [] ]
+    [ "esp:TX", "$serialMonitor:RX", "", [] ],
+    [ "esp:RX", "$serialMonitor:TX", "", [] ],
+    [ "esp:4", "esp:16", "green", [ "h33.64", "v-9.6" ] ],
+    [ "esp:17", "esp:5", "green", [ "h33.64", "v-9.6" ] ]
   ],
   "dependencies": {}
 }
