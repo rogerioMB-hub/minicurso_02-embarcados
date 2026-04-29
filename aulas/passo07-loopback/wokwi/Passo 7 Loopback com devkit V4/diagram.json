@@ -45,4 +45,6 @@
     [ "esp:GND.3", "led1:C", "black", [ "h62.44", "h28.4" ] ]
   ],
   "dependencies": {}
+}  ],
+  "dependencies": {}
 }
