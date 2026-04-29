@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "author": "Rogério M B",
+  "author": "Rogerio M B",
   "editor": "wokwi",
   "parts": [
     {
@@ -11,27 +11,27 @@
       "attrs": { "env": "micropython-20231227-v1.22.0" }
     },
     {
-      "type": "wokwi-resistor",
-      "id": "r1",
-      "top": 48,
-      "left": 192,
-      "rotate": 90,
-      "attrs": { "value": "330" }
-    },
-    {
       "type": "wokwi-led",
       "id": "led1",
-      "top": -10,
-      "left": 205,
-      "attrs": { "color": "red" }
+      "top": 34.8,
+      "left": 176.6,
+      "attrs": { "color": "red", "flip": "" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r1",
+      "top": 158.4,
+      "left": 172.25,
+      "rotate": 90,
+      "attrs": { "value": "330" }
     }
   ],
   "connections": [
-    [ "esp:TX",  "$serialMonitor:RX", "", [] ],
-    [ "esp:RX",  "$serialMonitor:TX", "", [] ],
-    [ "esp:2",   "r1:2",      "green", [] ],
-    [ "r1:1",    "led1:A",    "green", [] ],
-    [ "led1:C",  "esp:GND.2", "black", [] ]
+    [ "esp:TX", "$serialMonitor:RX", "", [] ],
+    [ "esp:RX", "$serialMonitor:TX", "", [] ],
+    [ "r1:1", "led1:A", "green", [ "v-19.2" ] ],
+    [ "r1:2", "esp:2", "green", [ "v18", "h-29.35", "v-48" ] ],
+    [ "esp:GND.3", "led1:C", "black", [ "h62.44", "h28.4" ] ]
   ],
   "dependencies": {}
 }
