@@ -9,7 +9,7 @@
       "top": 0,
       "left": 0,
       "attrs": { "env": "micropython-20231227-v1.22.0" }
-    },
+    }
   ],
   "connections": [
     [ "esp:TX", "$serialMonitor:RX", "", [] ],
