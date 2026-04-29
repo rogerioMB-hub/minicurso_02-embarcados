@@ -1,5 +1,7 @@
 # UART com MicroPython — Do Eco ao Protocolo
 
+![Banner do curso](./assets/banner.svg)
+
 **Mini Curso 02** do Curso Técnico em Automação Industrial.
 
 Repositório didático de comunicação serial UART com MicroPython, organizado em 10 passos progressivos — cada um introduz exatamente um conceito novo, sempre partindo do que já foi aprendido.
