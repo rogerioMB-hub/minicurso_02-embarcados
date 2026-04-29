@@ -10,6 +10,475 @@ title: "Passo 10 — Mini-Protocolo Bidirecional Completo"
 
 ---
 
+## Simulação e Código
+
+### Arquivos do projeto Wokwi
+
+| Arquivo | Descrição | Link |
+|---------|-----------|------|
+| `diagram.json` | Circuito no simulador | [abrir](https://github.com/rogerioMB-hub/minicurso_02-embarcados/blob/main/aulas/passo10-protocolo/wokwi/diagram.json) |
+| `wokwi.toml` | Configuração do projeto | [abrir](https://github.com/rogerioMB-hub/minicurso_02-embarcados/blob/main/aulas/passo10-protocolo/wokwi/wokwi.toml) |
+| `main.py` | Código principal | [abrir](https://github.com/rogerioMB-hub/minicurso_02-embarcados/blob/main/aulas/passo10-protocolo/wokwi/main.py) |
+| `protocolo.py` | Módulo compartilhado do protocolo | [abrir](https://github.com/rogerioMB-hub/minicurso_02-embarcados/blob/main/aulas/passo10-protocolo/wokwi/protocolo.py) |
+
+> **Como usar:** copie os quatro arquivos para as abas correspondentes no Wokwi.
+> O `protocolo.py` deve ser adicionado como arquivo extra clicando em **+** ao lado das abas.
+
+> **Loopback:** fios cruzados entre UART1 e UART2 já configurados no `diagram.json`.
+
+---
+
+### `protocolo.py` — módulo compartilhado
+
+```python
+# ============================================================
+# protocolo.py — Módulo compartilhado do mini-protocolo UART
+# ============================================================
+# Compatível com: Raspberry Pi Pico e ESP32
+# IDE: Thonny
+#
+# Este módulo deve ser gravado em AMBAS as placas.
+# Ele centraliza toda a lógica do protocolo, garantindo
+# que controladora e periférica falem exatamente a mesma
+# linguagem.
+#
+# Estrutura do frame:
+#
+#   $ TIPO : PAYLOAD * XX #
+#   │  │      │        │  │
+#   │  │      │        │  └── EOF  — fim de frame (fixo: '#')
+#   │  │      │        └───── Checksum XOR em hex (2 dígitos)
+#   │  │      └────────────── Payload — conteúdo da mensagem
+#   │  └───────────────────── Tipo — identifica a mensagem
+#   └──────────────────────── SOF  — início de frame (fixo: '$')
+#
+# Tipos de frame definidos:
+#   REQ  → Requisição de dado (controladora → periférica)
+#   DAD  → Dado de resposta   (periférica → controladora)
+#   ACK  → Confirmação        (qualquer direção)
+#   NAK  → Rejeição           (qualquer direção)
+#   ERR  → Erro descritivo    (qualquer direção)
+#
+# Exemplos de frames completos:
+#   "$REQ:TEMP*XX#"
+#   "$DAD:TEMP:24.3*XX#"
+#   "$ACK:REQ:TEMP*XX#"
+#   "$NAK:CHECKSUM*XX#"
+#   "$ERR:SENSOR_DESCONHECIDO*XX#"
+#
+# Onde XX é o checksum XOR em hexadecimal.
+# ============================================================
+
+# ------------------------------------------------------------
+# Constantes do protocolo
+# ------------------------------------------------------------
+
+SOF = '$'    # Start of Frame
+EOF = '#'    # End of Frame
+SEP = ':'    # Separador de campos
+CSP = '*'    # Separador de checksum
+
+# Tipos de frame
+T_REQ = 'REQ'    # Requisição
+T_DAD = 'DAD'    # Dado
+T_ACK = 'ACK'    # Confirmação (acknowledge)
+T_NAK = 'NAK'    # Rejeição    (negative acknowledge)
+T_ERR = 'ERR'    # Erro
+
+TIPOS_VALIDOS = (T_REQ, T_DAD, T_ACK, T_NAK, T_ERR)
+
+# Limites
+BUFFER_MAX   = 80    # Tamanho máximo do frame completo
+MAX_TENTATIVAS = 3   # Tentativas de retransmissão
+
+# ------------------------------------------------------------
+# Funções de checksum
+# ------------------------------------------------------------
+
+def calcular_checksum(dados):
+    """
+    Calcula o checksum XOR de todos os bytes da string 'dados'.
+    Retorna inteiro 0–255.
+    """
+    resultado = 0
+    for byte in dados.encode():
+        resultado ^= byte
+    return resultado
+
+
+# ------------------------------------------------------------
+# Funções de montagem e validação de frame
+# ------------------------------------------------------------
+
+def montar_frame(tipo, payload):
+    """
+    Monta um frame completo no formato: $TIPO:PAYLOAD*XX#
+    O checksum cobre o conteúdo entre SOF e CSP: "TIPO:PAYLOAD"
+    """
+    conteudo = f"{tipo}{SEP}{payload}"
+    cs       = calcular_checksum(conteudo)
+    return f"{SOF}{conteudo}{CSP}{cs:02X}{EOF}"
+
+
+def validar_frame(frame):
+    """
+    Valida e desempacota um frame recebido.
+
+    Retorna um dicionário com:
+      {'ok': True,  'tipo': ..., 'payload': ...}  — frame íntegro
+      {'ok': False, 'erro': ...}                  — frame inválido
+
+    Verificações realizadas (em ordem):
+      1. Presença de SOF e EOF
+      2. Presença do separador de checksum
+      3. Tamanho do campo checksum (exatamente 2 hex digits)
+      4. Validade dos hex digits
+      5. Correspondência do checksum calculado vs recebido
+      6. Tipo de frame reconhecido
+    """
+    # 1. SOF e EOF
+    if not (frame.startswith(SOF) and frame.endswith(EOF)):
+        return {'ok': False, 'erro': 'SOF/EOF ausente'}
+
+    interior = frame[1:-1]          # Remove '$' e '#'
+
+    # 2. Separador de checksum
+    if CSP not in interior:
+        return {'ok': False, 'erro': 'Separador de checksum ausente'}
+
+    partes   = interior.rsplit(CSP, 1)
+    conteudo = partes[0]            # "TIPO:PAYLOAD"
+    cs_rec   = partes[1]            # "XX"
+
+    # 3. Tamanho do checksum
+    if len(cs_rec) != 2:
+        return {'ok': False, 'erro': 'Checksum malformado'}
+
+    # 4. Validade dos hex digits
+    try:
+        cs_recebido  = int(cs_rec, 16)
+        cs_calculado = calcular_checksum(conteudo)
+    except ValueError:
+        return {'ok': False, 'erro': 'Checksum contém caracteres inválidos'}
+
+    # 5. Comparação de checksum
+    if cs_calculado != cs_recebido:
+        return {'ok': False, 'erro': f'Checksum diverge: calc={cs_calculado:02X} rec={cs_rec}'}
+
+    # 6. Tipo de frame
+    if SEP not in conteudo:
+        return {'ok': False, 'erro': 'Separador de tipo ausente'}
+
+    partes2 = conteudo.split(SEP, 1)
+    tipo    = partes2[0]
+    payload = partes2[1]
+
+    if tipo not in TIPOS_VALIDOS:
+        return {'ok': False, 'erro': f'Tipo desconhecido: {tipo}'}
+
+    return {'ok': True, 'tipo': tipo, 'payload': payload}
+
+
+# ------------------------------------------------------------
+# Frames prontos (atalhos para os mais usados)
+# ------------------------------------------------------------
+
+def frame_ack(referencia):
+    """Monta um ACK referenciando o payload recebido."""
+    return montar_frame(T_ACK, referencia)
+
+
+def frame_nak(motivo):
+    """Monta um NAK com o motivo da rejeição."""
+    return montar_frame(T_NAK, motivo)
+
+
+def frame_err(descricao):
+    """Monta um ERR com descrição do problema."""
+    return montar_frame(T_ERR, descricao)
+
+
+def frame_req(sensor):
+    """Monta uma requisição de sensor."""
+    return montar_frame(T_REQ, sensor)
+
+
+def frame_dad(sensor, valor):
+    """Monta uma resposta de dado."""
+    return montar_frame(T_DAD, f"{sensor}{SEP}{valor}")
+```
+
+---
+
+### `main.py`
+
+```python
+# ============================================================
+# Passo 10 — Mini-Protocolo Completo (simulação Wokwi)
+# ============================================================
+# Placa : ESP32 DevKit C v4  —  1 único ESP32
+# IDE   : Wokwi (https://wokwi.com)
+#
+# Topologia de loopback com fios externos reais:
+#
+#   UART1 faz o papel de CONTROLADORA
+#   UART2 faz o papel de PERIFÉRICA
+#
+#   Fios no diagrama (pontes externas entre pinos):
+#     GPIO 4  (TX1) ──laranja──► GPIO 16 (RX2)
+#     GPIO 17 (TX2) ──azul────► GPIO 5  (RX1)
+#
+#   Serial Monitor (UART0): esp:TX / esp:RX
+#
+# O que este programa faz:
+#   Frame estruturado com SOF/EOF, tipo, payload, checksum XOR,
+#   ACK/NAK e retransmissão automática — tudo em loopback.
+#
+# Estrutura do frame: $TIPO:PAYLOAD*XX#
+#   SOF=$  EOF=#  CSP=*  SEP=:
+#   Exemplos:
+#     "$REQ:TEMP*4A#"
+#     "$DAD:TEMP:45.3*7F#"
+#     "$NAK:CHECKSUM*XX#"
+#
+# ATENÇÃO: protocolo.py deve estar na mesma pasta que main.py
+# ============================================================
+
+from machine import UART, Pin  # type: ignore[import]
+import time
+import protocolo as proto
+
+# ------------------------------------------------------------
+# Configuração das UARTs
+# ------------------------------------------------------------
+
+BAUD_RATE = 9600
+
+# UART1 — CONTROLADORA: TX=GPIO4 → GPIO16 (RX2)
+uart_ctrl = UART(1, baudrate=BAUD_RATE, tx=Pin(4), rx=Pin(5))
+
+# UART2 — PERIFÉRICA: TX=GPIO17 → GPIO5 (RX1)
+uart_peri = UART(2, baudrate=BAUD_RATE, tx=Pin(17), rx=Pin(16))
+
+# ------------------------------------------------------------
+# Parâmetros
+# ------------------------------------------------------------
+
+INTERVALO_MS   = 4000
+TIMEOUT_MS     = 500
+MAX_TENTATIVAS = proto.MAX_TENTATIVAS
+SENSORES       = ['TEMP', 'LUM']
+
+stats = {
+    'enviados'      : 0,
+    'confirmados'   : 0,
+    'nak_recebidos' : 0,
+    'timeouts'      : 0,
+    'retransmissoes': 0,
+}
+
+# ------------------------------------------------------------
+# Sensores simulados (papel da periférica)
+# ------------------------------------------------------------
+
+def ler_temperatura():
+    base = 45.0
+    variacao = (time.ticks_ms() % 10000) / 10000 * 5
+    return f"{base + variacao:.1f}"
+
+def ler_luminosidade():
+    t = time.ticks_ms() % 60000
+    return f"{round(t / 60000 * 100, 1)}"
+
+sensores = {
+    'TEMP': ler_temperatura,
+    'LUM' : ler_luminosidade,
+}
+
+# ------------------------------------------------------------
+# Lógica da PERIFÉRICA — máquina de estados não bloqueante
+# ------------------------------------------------------------
+
+peri_estado = 'IDLE'
+peri_buf    = ''
+peri_t0     = 0
+PERI_NAK    = 0
+PERI_DAD    = 0
+
+def peri_tick():
+    """
+    Lê UART2 byte a byte. Ao capturar um frame completo
+    ($...#), valida checksum e responde com DAD ou NAK.
+    Não bloqueante.
+    """
+    global peri_estado, peri_buf, peri_t0, PERI_NAK, PERI_DAD
+
+    # Timeout de segurança
+    if peri_estado == 'RECEBENDO':
+        if time.ticks_diff(time.ticks_ms(), peri_t0) > 1000:
+            peri_estado, peri_buf = 'IDLE', ''
+
+    while uart_peri.any():
+        char = uart_peri.read(1).decode()
+
+        if peri_estado == 'IDLE':
+            if char == proto.SOF:
+                peri_buf    = char
+                peri_t0     = time.ticks_ms()
+                peri_estado = 'RECEBENDO'
+
+        elif peri_estado == 'RECEBENDO':
+            peri_buf += char
+            if char == proto.EOF:
+                # Frame completo — processa
+                resultado = proto.validar_frame(peri_buf)
+                if not resultado['ok']:
+                    PERI_NAK += 1
+                    resp = proto.frame_nak(resultado['erro'][:20])
+                    uart_peri.write(resp)
+                    print(f"  [PERI] NAK #{PERI_NAK}: {resultado['erro']}")
+                elif resultado['tipo'] == proto.T_REQ:
+                    sensor = resultado['payload'].strip().upper()
+                    if sensor in sensores:
+                        resp = proto.frame_dad(sensor, sensores[sensor]())
+                    else:
+                        resp = proto.frame_err(f"SENSOR:{sensor}")
+                    uart_peri.write(resp)
+                    PERI_DAD += 1
+                    print(f"  [PERI] DAD #{PERI_DAD:03d}: '{peri_buf}' → '{resp}'")
+                else:
+                    resp = proto.frame_err('TIPO_INESPERADO')
+                    uart_peri.write(resp)
+                peri_buf, peri_estado = '', 'IDLE'
+
+            elif len(peri_buf) > proto.BUFFER_MAX:
+                PERI_NAK += 1
+                uart_peri.write(proto.frame_nak('FRAME_LONGO'))
+                peri_buf, peri_estado = '', 'IDLE'
+
+# ------------------------------------------------------------
+# Lógica da CONTROLADORA — envia com retransmissão
+# ------------------------------------------------------------
+
+def ctrl_aguardar_frame():
+    """Lê UART1 até capturar frame completo ($...#) ou timeout."""
+    buf        = ''
+    capturando = False
+    t0         = time.ticks_ms()
+    while time.ticks_diff(time.ticks_ms(), t0) < TIMEOUT_MS:
+        peri_tick()   # Periférica roda durante a espera
+        while uart_ctrl.any():
+            char = uart_ctrl.read(1).decode()
+            if char == proto.SOF:
+                buf        = char
+                capturando = True
+            elif capturando:
+                buf += char
+                if char == proto.EOF:
+                    return buf
+                if len(buf) > proto.BUFFER_MAX:
+                    buf, capturando = '', False
+    return None
+
+def ctrl_requisitar(sensor):
+    """Envia REQ com retransmissão automática em caso de NAK/timeout."""
+    frame = proto.frame_req(sensor)
+
+    for tentativa in range(1, MAX_TENTATIVAS + 1):
+        if tentativa > 1:
+            stats['retransmissoes'] += 1
+            print(f"  [CTRL] ↺ Retransmissão {tentativa}/{MAX_TENTATIVAS}")
+
+        uart_ctrl.write(frame)
+        stats['enviados'] += 1
+        print(f"  [CTRL] → [{tentativa}] '{frame.strip()}'")
+
+        frame_rec = ctrl_aguardar_frame()
+
+        if frame_rec is None:
+            stats['timeouts'] += 1
+            print(f"  [CTRL] ✗ Timeout")
+            continue
+
+        resultado = proto.validar_frame(frame_rec)
+        print(f"  [CTRL] ← '{frame_rec.strip()}'")
+
+        if not resultado['ok']:
+            print(f"  [CTRL] ✗ Frame inválido: {resultado['erro']}")
+            continue
+
+        tipo    = resultado['tipo']
+        payload = resultado['payload']
+
+        if tipo == proto.T_NAK:
+            stats['nak_recebidos'] += 1
+            print(f"  [CTRL] ✗ NAK: '{payload}'")
+            continue
+
+        if tipo == proto.T_DAD:
+            partes = payload.split(proto.SEP, 1)
+            if len(partes) == 2:
+                stats['confirmados'] += 1
+                return partes[1], tentativa
+
+        if tipo == proto.T_ERR:
+            print(f"  [CTRL] ✗ ERR: '{payload}'")
+            return None, tentativa
+
+    return None, MAX_TENTATIVAS
+
+# ------------------------------------------------------------
+# Mensagem inicial
+# ------------------------------------------------------------
+
+print("=" * 44)
+print("  Passo 10 — Mini-Protocolo (Loopback)")
+print("=" * 44)
+print("  UART1 (ctrl): TX=GPIO4  RX=GPIO5")
+print("  UART2 (peri): TX=GPIO17 RX=GPIO16")
+print("  Fio laranja : GPIO4  → GPIO16")
+print("  Fio azul    : GPIO17 → GPIO5")
+print(f"  Frame: SOF='{proto.SOF}' EOF='{proto.EOF}' CSP='{proto.CSP}'")
+print(f"  Max tentativas: {MAX_TENTATIVAS}")
+print(f"  Sensores: {', '.join(SENSORES)}")
+print("=" * 44)
+print()
+
+# ------------------------------------------------------------
+# Loop principal
+# ------------------------------------------------------------
+
+ciclo     = 0
+t_proximo = time.ticks_ms()
+
+while True:
+    peri_tick()
+
+    if time.ticks_diff(time.ticks_ms(), t_proximo) >= INTERVALO_MS:
+        t_proximo = time.ticks_ms()
+        ciclo += 1
+        print(f"══ Ciclo {ciclo} {'═' * 34}")
+
+        for sensor in SENSORES:
+            print(f"  Sensor: {sensor}")
+            valor, tentativas = ctrl_requisitar(sensor)
+            if valor is not None:
+                print(f"  [CTRL] ✓ [{sensor}] = {valor}  ({tentativas} tentativa(s))")
+            else:
+                print(f"  [CTRL] ✗ [{sensor}] = FALHA após {MAX_TENTATIVAS} tentativas")
+
+        if ciclo % 5 == 0:
+            total = stats['enviados'] if stats['enviados'] > 0 else 1
+            taxa  = stats['confirmados'] / total * 100
+            print(f"\n  ── Estatísticas ──────────────────────")
+            for chave, val in stats.items():
+                print(f"    {chave:<16}: {val}")
+            print(f"    {'taxa OK':<16}: {taxa:.1f}%")
+
+        print()
+```
+
+---
 ## Objetivos
 
 Ao final deste passo você será capaz de:

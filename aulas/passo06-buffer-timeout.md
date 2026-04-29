@@ -10,6 +10,281 @@ title: "Passo 6 — Buffer e Timeout na Recepção UART"
 
 ---
 
+## Simulação e Código
+
+### Arquivos do projeto Wokwi
+
+| Arquivo | Descrição | Link |
+|---------|-----------|------|
+| `diagram.json` | Circuito no simulador | [abrir](https://github.com/rogerioMB-hub/minicurso_02-embarcados/blob/main/aulas/passo06-buffer-timeout/wokwi/diagram.json) |
+| `wokwi.toml` | Configuração do projeto | [abrir](https://github.com/rogerioMB-hub/minicurso_02-embarcados/blob/main/aulas/passo06-buffer-timeout/wokwi/wokwi.toml) |
+| `main_wokwi.py` | Código para o Wokwi | [abrir](https://github.com/rogerioMB-hub/minicurso_02-embarcados/blob/main/aulas/passo06-buffer-timeout/wokwi/main_wokwi.py) |
+| `main_placa.py` | Código para ESP32 / Pico real | [abrir](https://github.com/rogerioMB-hub/minicurso_02-embarcados/blob/main/aulas/passo06-buffer-timeout/wokwi/main_placa.py) |
+
+> **Como usar:** copie o conteúdo de cada arquivo para as abas correspondentes em [wokwi.com/projects/new/micropython-esp32](https://wokwi.com/projects/new/micropython-esp32).
+
+---
+
+### ⚠️ Por que dois arquivos de código?
+
+| | `main_wokwi.py` | `main_placa.py` |
+|---|---|---|
+| **Leitura UART** | `uart.read(1)` bloqueante | `if uart.any(): uart.read(1)` |
+| **Comportamento** | Aguarda o byte chegar | Verifica e segue em frente |
+| **Uso** | Wokwi (simulação) | ESP32 / Raspberry Pi Pico |
+
+**Por que `uart.any()` não funciona no Wokwi?**
+O `$serialMonitor` entrega bytes com latência de simulação. `uart.any()` consulta o buffer naquele instante — retorna `0` antes do byte chegar e o programa o ignora. Na placa real, o driver de hardware preenche o buffer imediatamente, sem latência.
+
+---
+
+### `main_wokwi.py` — para o Wokwi
+
+```python
+# ============================================================
+# Passo 6 — Buffer e Timeout na Recepção UART
+# Versão: SIMULAÇÃO WOKWI
+# ============================================================
+# Placa : ESP32 DevKit C v4  |  IDE: Wokwi
+#
+# uart.read(1) BLOQUEANTE — aguarda o byte.
+# uart.any() não funciona aqui por latência do $serialMonitor.
+# Veja main_placa.py para entender o motivo e a versão correta.
+#
+# NOTA SOBRE TIMEOUT NO WOKWI:
+#   Como uart.read(1) é bloqueante, o timeout só é verificado
+#   ENTRE bytes recebidos — não durante silêncio na linha.
+#   Para testar o limite de buffer: envie string com >64 chars.
+#   Para ver o timeout na placa real: veja main_placa.py.
+#
+# Como usar: LED:L  LED:D  MSG:ola  + Enter
+# ============================================================
+
+from machine import UART, Pin  # type: ignore[import]
+import time
+
+BAUD_RATE  = 9600
+LED_PIN    = 2
+TIMEOUT_MS = 2000
+BUFFER_MAX = 64
+
+uart = UART(1, baudrate=BAUD_RATE, tx=Pin(1), rx=Pin(3))
+led  = Pin(LED_PIN, Pin.OUT)
+
+IDLE        = 'IDLE'
+RECEBENDO   = 'RECEBENDO'
+PROCESSANDO = 'PROCESSANDO'
+
+estado       = IDLE
+buffer       = ''
+tempo_inicio = 0
+
+def cmd_led(arg):
+    if arg == 'L':
+        led.value(1); return "LED ligado"
+    elif arg == 'D':
+        led.value(0); return "LED desligado"
+    return f"Argumento inválido: '{arg}'"
+
+def cmd_msg(arg):
+    print(f"[MSG] {arg}"); return f"Mensagem: {arg}"
+
+comandos = { 'LED': cmd_led, 'MSG': cmd_msg }
+
+def processar(buffer):
+    linha = buffer.strip()
+    if ':' not in linha: return "Formato inválido"
+    partes  = linha.split(':', 1)
+    comando = partes[0].upper()
+    if comando in comandos: return comandos[comando](partes[1])
+    return f"Comando desconhecido: '{comando}'"
+
+def descartar(motivo):
+    aviso = f"[DESCARTADO] {motivo}"
+    uart.write(aviso + '
+'); print(aviso)
+    return IDLE, '', 0
+
+print("=" * 40)
+print("  Passo 6 — Buffer e Timeout  [Wokwi]")
+print("=" * 40)
+print(f"  Timeout: {TIMEOUT_MS} ms | Buffer máx: {BUFFER_MAX} B")
+print("  Formato: COMANDO:ARGUMENTO + Enter")
+print("=" * 40)
+
+while True:
+    byte = uart.read(1)
+    char = byte.decode()
+
+    # Timeout verificado entre bytes (limitação do modo bloqueante)
+    if estado == RECEBENDO:
+        if time.ticks_diff(time.ticks_ms(), tempo_inicio) >= TIMEOUT_MS:
+            estado, buffer, tempo_inicio = descartar(
+                f"timeout {TIMEOUT_MS} ms — buffer: '{buffer}'"
+            )
+
+    if estado == IDLE:
+        if char not in ('
+', '', ' '):
+            buffer       = char
+            tempo_inicio = time.ticks_ms()
+            estado       = RECEBENDO
+            print(f"[{estado}]", end=' ')
+
+    elif estado == RECEBENDO:
+        if char == '
+':
+            estado = PROCESSANDO
+        elif char == '':
+            pass
+        elif len(buffer) >= BUFFER_MAX:
+            estado, buffer, tempo_inicio = descartar(
+                f"buffer cheio ({BUFFER_MAX} bytes)"
+            )
+        else:
+            buffer += char
+
+    if estado == PROCESSANDO:
+        resposta = processar(buffer)
+        uart.write(resposta + '
+')
+        print(f"
+>> {resposta}")
+        buffer, tempo_inicio = '', 0
+        estado = IDLE
+        print(f"[{estado}]", end=' ')
+```
+
+---
+
+### `main_placa.py` — para ESP32 / Raspberry Pi Pico
+
+```python
+# ============================================================
+# Passo 6 — Buffer e Timeout na Recepção UART
+# Versão: PLACA REAL (ESP32 / Raspberry Pi Pico)
+# ============================================================
+# Placa : ESP32 DevKit  ou  Raspberry Pi Pico  |  IDE: Thonny
+#
+# ------------------------------------
+# Por que uart.any() na placa real?
+# ------------------------------------
+#   Essencial para o timeout funcionar corretamente!
+#   Com uart.any(), o loop roda continuamente — mesmo sem
+#   bytes chegando, a verificação de timeout é executada
+#   a cada iteração. Se o transmissor parar de enviar no
+#   meio de uma mensagem, o timeout dispara normalmente.
+#   Na placa real, o driver preenche o buffer sem latência.
+#
+# ------------------------------------
+# Por que uart.any() NÃO funciona no Wokwi?
+# ------------------------------------
+#   O $serialMonitor tem latência na entrega dos bytes.
+#   uart.any() retorna 0 prematuramente — bytes são perdidos.
+#   No Wokwi, uart.read(1) bloqueante é a solução (main_wokwi.py),
+#   mas isso impede o timeout de funcionar durante silêncio
+#   na linha — limitação aceita apenas na simulação.
+# ============================================================
+
+from machine import UART, Pin
+import time
+
+BAUD_RATE  = 9600
+LED_PIN    = 2
+TIMEOUT_MS = 2000   # 2 s sem '
+' → descarta
+BUFFER_MAX = 64
+
+uart = UART(0, baudrate=BAUD_RATE)
+led  = Pin(LED_PIN, Pin.OUT)
+
+IDLE        = 'IDLE'
+RECEBENDO   = 'RECEBENDO'
+PROCESSANDO = 'PROCESSANDO'
+
+estado       = IDLE
+buffer       = ''
+tempo_inicio = 0
+
+def cmd_led(arg):
+    if arg == 'L':
+        led.value(1); return "LED ligado"
+    elif arg == 'D':
+        led.value(0); return "LED desligado"
+    return f"Argumento inválido: '{arg}'"
+
+def cmd_msg(arg):
+    print(f"[MSG] {arg}"); return f"Mensagem: {arg}"
+
+comandos = { 'LED': cmd_led, 'MSG': cmd_msg }
+
+def processar(buffer):
+    linha = buffer.strip()
+    if ':' not in linha: return "Formato inválido"
+    partes  = linha.split(':', 1)
+    comando = partes[0].upper()
+    if comando in comandos: return comandos[comando](partes[1])
+    return f"Comando desconhecido: '{comando}'"
+
+def descartar(motivo):
+    aviso = f"[DESCARTADO] {motivo}"
+    uart.write(aviso + '
+'); print(aviso)
+    return IDLE, '', 0
+
+print("=" * 40)
+print("  Passo 6 — Buffer e Timeout  [Placa]")
+print("=" * 40)
+print(f"  Timeout: {TIMEOUT_MS} ms | Buffer máx: {BUFFER_MAX} B")
+print("  Formato: COMANDO:ARGUMENTO + Enter")
+print("=" * 40)
+
+while True:
+    # Timeout funciona aqui mesmo sem bytes chegando —
+    # o loop não está bloqueado, roda continuamente
+    if estado == RECEBENDO:
+        if time.ticks_diff(time.ticks_ms(), tempo_inicio) >= TIMEOUT_MS:
+            estado, buffer, tempo_inicio = descartar(
+                f"timeout {TIMEOUT_MS} ms — buffer: '{buffer}'"
+            )
+
+    if uart.any():
+        byte = uart.read(1)
+        char = byte.decode()
+
+        if estado == IDLE:
+            if char not in ('
+', '', ' '):
+                buffer       = char
+                tempo_inicio = time.ticks_ms()
+                estado       = RECEBENDO
+                print(f"[{estado}]", end=' ')
+
+        elif estado == RECEBENDO:
+            if char == '
+':
+                estado = PROCESSANDO
+            elif char == '':
+                pass
+            elif len(buffer) >= BUFFER_MAX:
+                estado, buffer, tempo_inicio = descartar(
+                    f"buffer cheio ({BUFFER_MAX} bytes)"
+                )
+            else:
+                buffer += char
+
+        if estado == PROCESSANDO:
+            resposta = processar(buffer)
+            uart.write(resposta + '
+')
+            print(f"
+>> {resposta}")
+            buffer, tempo_inicio = '', 0
+            estado = IDLE
+            print(f"[{estado}]", end=' ')
+```
+
+---
 ## Objetivos
 
 Ao final deste passo você será capaz de:

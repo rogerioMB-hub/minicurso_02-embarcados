@@ -10,6 +10,157 @@ title: "Passo 2 — Controle de LED via UART"
 
 ---
 
+## Simulação e Código
+
+### Arquivos do projeto Wokwi
+
+| Arquivo | Descrição | Link |
+|---------|-----------|------|
+| `diagram.json` | Circuito no simulador | [abrir](https://github.com/rogerioMB-hub/minicurso_02-embarcados/blob/main/aulas/passo02-led-uart/wokwi/diagram.json) |
+| `wokwi.toml` | Configuração do projeto | [abrir](https://github.com/rogerioMB-hub/minicurso_02-embarcados/blob/main/aulas/passo02-led-uart/wokwi/wokwi.toml) |
+| `main_wokwi.py` | Código para o Wokwi | [abrir](https://github.com/rogerioMB-hub/minicurso_02-embarcados/blob/main/aulas/passo02-led-uart/wokwi/main_wokwi.py) |
+| `main_placa.py` | Código para ESP32 / Pico real | [abrir](https://github.com/rogerioMB-hub/minicurso_02-embarcados/blob/main/aulas/passo02-led-uart/wokwi/main_placa.py) |
+
+> **Como usar:** copie o conteúdo de cada arquivo para as abas correspondentes em [wokwi.com/projects/new/micropython-esp32](https://wokwi.com/projects/new/micropython-esp32).
+
+---
+
+### ⚠️ Por que dois arquivos de código?
+
+| | `main_wokwi.py` | `main_placa.py` |
+|---|---|---|
+| **Leitura UART** | `uart.read(1)` bloqueante | `if uart.any(): uart.read(1)` |
+| **Comportamento** | Aguarda o byte chegar | Verifica e segue em frente |
+| **Uso** | Wokwi (simulação) | ESP32 / Raspberry Pi Pico |
+
+**Por que `uart.any()` não funciona no Wokwi?**
+O `$serialMonitor` entrega bytes com latência de simulação. `uart.any()` consulta o buffer naquele instante — retorna `0` antes do byte chegar e o programa o ignora. Na placa real, o driver de hardware preenche o buffer imediatamente, sem latência.
+
+---
+
+### `main_wokwi.py` — para o Wokwi
+
+```python
+# ============================================================
+# Passo 2 — Controle de LED via UART
+# Versão: SIMULAÇÃO WOKWI
+# ============================================================
+# Placa : ESP32 DevKit C v4  |  IDE: Wokwi
+#
+# uart.read(1) BLOQUEANTE — aguarda o byte.
+# uart.any() não funciona aqui por latência do $serialMonitor.
+# Veja main_placa.py para entender o motivo e a versão correta
+# para uso com hardware real.
+#
+# Como usar: 'L' + Enter → liga | 'D' + Enter → desliga
+# ============================================================
+
+from machine import UART, Pin  # type: ignore[import]
+
+BAUD_RATE = 9600
+LED_PIN   = 2
+
+uart = UART(1, baudrate=BAUD_RATE, tx=Pin(1), rx=Pin(3))
+led  = Pin(LED_PIN, Pin.OUT)
+
+print("=" * 40)
+print("  Passo 2 — Controle de LED  [Wokwi]")
+print("=" * 40)
+print("  'L' → Liga o LED | 'D' → Desliga o LED")
+print("=" * 40)
+
+while True:
+    byte = uart.read(1)
+    char = byte.decode()
+
+    if char == 'L':
+        led.value(1)
+        uart.write("LED ligado
+")
+        print("LED ligado")
+
+    elif char == 'D':
+        led.value(0)
+        uart.write("LED desligado
+")
+        print("LED desligado")
+
+    elif char not in ('
+', ''):
+        uart.write("Caractere desconhecido
+")
+        print(f"Desconhecido: {repr(char)}")
+```
+
+---
+
+### `main_placa.py` — para ESP32 / Raspberry Pi Pico
+
+```python
+# ============================================================
+# Passo 2 — Controle de LED via UART
+# Versão: PLACA REAL (ESP32 / Raspberry Pi Pico)
+# ============================================================
+# Placa : ESP32 DevKit  ou  Raspberry Pi Pico  |  IDE: Thonny
+#
+# ------------------------------------
+# Por que uart.any() na placa real?
+# ------------------------------------
+#   uart.any() é não bloqueante: consulta o buffer da UART
+#   sem travar o programa. Se não houver bytes, o loop
+#   continua — permitindo tarefas paralelas (ex: ler sensor).
+#   Na placa real, o driver de hardware preenche o buffer
+#   imediatamente ao receber cada byte, sem latência.
+#
+# ------------------------------------
+# Por que uart.any() NÃO funciona no Wokwi?
+# ------------------------------------
+#   O $serialMonitor do Wokwi tem latência na entrega dos
+#   bytes. uart.any() consulta o buffer antes do byte chegar
+#   e retorna 0 — o byte é perdido. No Wokwi usamos
+#   uart.read(1) bloqueante (veja main_wokwi.py).
+# ============================================================
+
+from machine import UART, Pin
+
+BAUD_RATE = 9600
+LED_PIN   = 2     # ESP32: GPIO2 (LED onboard) | Pico: use 25
+
+uart = UART(0, baudrate=BAUD_RATE)
+led  = Pin(LED_PIN, Pin.OUT)
+
+print("=" * 40)
+print("  Passo 2 — Controle de LED  [Placa]")
+print("=" * 40)
+print("  'L' → Liga o LED | 'D' → Desliga o LED")
+print("=" * 40)
+
+while True:
+    if uart.any():
+        byte = uart.read(1)
+        char = byte.decode()
+
+        if char == 'L':
+            led.value(1)
+            uart.write("LED ligado
+")
+            print("LED ligado")
+
+        elif char == 'D':
+            led.value(0)
+            uart.write("LED desligado
+")
+            print("LED desligado")
+
+        elif char not in ('
+', ''):
+            uart.write("Caractere desconhecido
+")
+            print(f"Desconhecido: {repr(char)}")
+    # aqui poderiam vir outras tarefas paralelas
+```
+
+---
 ## Objetivos
 
 Ao final deste passo você será capaz de:
