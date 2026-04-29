@@ -1,0 +1,37 @@
+title: "UART com MicroPython — Do Eco ao Protocolo"
+description: "Mini curso 02 para o Curso Técnico em Automação Industrial. Comunicação serial UART com MicroPython em 10 passos progressivos — do eco simples ao mini-protocolo bidirecional com checksum e retransmissão."
+
+theme: jekyll-theme-cayman
+
+# URL base — substitua pelo seu usuário do GitHub
+baseurl: "/minicurso_02-embarcados"
+url: "https://rogerioMB-hub.github.io"
+
+# Navegação entre páginas
+header_pages:
+  - index.md
+  - aulas/passo01-eco-serial.md
+  - aulas/passo02-led-uart.md
+  - aulas/passo03-dicionario.md
+  - aulas/passo04-parsing.md
+  - aulas/passo05-maquina-estados.md
+  - aulas/passo06-buffer-timeout.md
+  - aulas/passo07-loopback.md
+  - aulas/passo08-controladora-periferica.md
+  - aulas/passo09-checksum.md
+  - aulas/passo10-protocolo.md
+
+# Configurações gerais
+markdown: kramdown
+highlighter: rouge
+
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
+
+rouge:
+  wrap: true
+
+exclude:
+  - "*.zip"
+  - COMO-PUBLICAR.md

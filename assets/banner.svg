@@ -1,0 +1,198 @@
+<svg width="1360" height="480" viewBox="0 0 680 240" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title>Banner — UART com MicroPython: Do Eco ao Protocolo</title>
+  <desc>Banner técnico com fundo escuro, ondas UART seriais, frames de protocolo e título do curso</desc>
+
+  <!-- Fundo -->
+  <rect x="0" y="0" width="680" height="240" fill="#031E2F"/>
+
+  <!-- Trilhas de circuito esquerda -->
+  <g stroke="#0E4C6E" stroke-width="0.5" fill="none" opacity="0.55">
+    <line x1="0" y1="35" x2="80" y2="35"/>
+    <line x1="80" y1="35" x2="80" y2="70"/>
+    <line x1="80" y1="70" x2="160" y2="70"/>
+    <circle cx="80" cy="35" r="2.5" fill="#0E4C6E" stroke="none"/>
+    <circle cx="80" cy="70" r="2.5" fill="#0E4C6E" stroke="none"/>
+
+    <line x1="0" y1="120" x2="50" y2="120"/>
+    <line x1="50" y1="120" x2="50" y2="155"/>
+    <line x1="50" y1="155" x2="140" y2="155"/>
+    <line x1="140" y1="155" x2="140" y2="130"/>
+    <line x1="140" y1="130" x2="200" y2="130"/>
+    <circle cx="50"  cy="120" r="2.5" fill="#0E4C6E" stroke="none"/>
+    <circle cx="50"  cy="155" r="2.5" fill="#0E4C6E" stroke="none"/>
+    <circle cx="140" cy="155" r="2.5" fill="#0E4C6E" stroke="none"/>
+    <circle cx="140" cy="130" r="2.5" fill="#0E4C6E" stroke="none"/>
+
+    <line x1="0" y1="205" x2="70" y2="205"/>
+    <line x1="70" y1="205" x2="70" y2="225"/>
+    <line x1="70" y1="225" x2="180" y2="225"/>
+    <circle cx="70" cy="205" r="2.5" fill="#0E4C6E" stroke="none"/>
+    <circle cx="70" cy="225" r="2.5" fill="#0E4C6E" stroke="none"/>
+  </g>
+
+  <!-- Trilhas de circuito direita -->
+  <g stroke="#0E4C6E" stroke-width="0.5" fill="none" opacity="0.55">
+    <line x1="680" y1="45" x2="610" y2="45"/>
+    <line x1="610" y1="45" x2="610" y2="85"/>
+    <line x1="610" y1="85" x2="560" y2="85"/>
+    <circle cx="610" cy="45" r="2.5" fill="#0E4C6E" stroke="none"/>
+    <circle cx="610" cy="85" r="2.5" fill="#0E4C6E" stroke="none"/>
+
+    <line x1="680" y1="155" x2="630" y2="155"/>
+    <line x1="630" y1="155" x2="630" y2="115"/>
+    <line x1="630" y1="115" x2="580" y2="115"/>
+    <line x1="580" y1="115" x2="580" y2="175"/>
+    <line x1="580" y1="175" x2="540" y2="175"/>
+    <circle cx="630" cy="155" r="2.5" fill="#0E4C6E" stroke="none"/>
+    <circle cx="630" cy="115" r="2.5" fill="#0E4C6E" stroke="none"/>
+    <circle cx="580" cy="115" r="2.5" fill="#0E4C6E" stroke="none"/>
+    <circle cx="580" cy="175" r="2.5" fill="#0E4C6E" stroke="none"/>
+
+    <line x1="680" y1="215" x2="550" y2="215"/>
+    <line x1="550" y1="215" x2="550" y2="240"/>
+    <circle cx="550" cy="215" r="2.5" fill="#0E4C6E" stroke="none"/>
+  </g>
+
+  <!-- Onda UART — sinal TX (topo, canto esquerdo) -->
+  <!-- idle HIGH → start bit LOW → 8 bits → stop bit HIGH -->
+  <g stroke="#1A8C6E" stroke-width="1.2" fill="none" opacity="0.35">
+    <!-- idle -->
+    <line x1="20"  y1="18" x2="42"  y2="18"/>
+    <!-- start bit -->
+    <line x1="42"  y1="18" x2="42"  y2="26"/>
+    <line x1="42"  y1="26" x2="54"  y2="26"/>
+    <!-- bit 0 = 1 -->
+    <line x1="54"  y1="26" x2="54"  y2="18"/>
+    <line x1="54"  y1="18" x2="66"  y2="18"/>
+    <!-- bit 1 = 0 -->
+    <line x1="66"  y1="18" x2="66"  y2="26"/>
+    <line x1="66"  y1="26" x2="78"  y2="26"/>
+    <!-- bit 2 = 1 -->
+    <line x1="78"  y1="26" x2="78"  y2="18"/>
+    <line x1="78"  y1="18" x2="90"  y2="18"/>
+    <!-- bit 3 = 1 -->
+    <line x1="90"  y1="18" x2="102" y2="18"/>
+    <!-- bit 4 = 0 -->
+    <line x1="102" y1="18" x2="102" y2="26"/>
+    <line x1="102" y1="26" x2="114" y2="26"/>
+    <!-- bit 5 = 1 -->
+    <line x1="114" y1="26" x2="114" y2="18"/>
+    <line x1="114" y1="18" x2="126" y2="18"/>
+    <!-- bit 6 = 0 -->
+    <line x1="126" y1="18" x2="126" y2="26"/>
+    <line x1="126" y1="26" x2="138" y2="26"/>
+    <!-- bit 7 = 1 -->
+    <line x1="138" y1="26" x2="138" y2="18"/>
+    <line x1="138" y1="18" x2="150" y2="18"/>
+    <!-- stop bit -->
+    <line x1="150" y1="18" x2="168" y2="18"/>
+  </g>
+  <!-- label TX -->
+  <text x="18" y="14" font-family="'Courier New', monospace" font-size="7" fill="#1A8C6E" opacity="0.45">TX</text>
+
+  <!-- Onda UART — sinal RX (abaixo do TX, espelhado/defasado) -->
+  <g stroke="#2B7FD4" stroke-width="1.2" fill="none" opacity="0.3">
+    <line x1="20"  y1="30" x2="50"  y2="30"/>
+    <line x1="50"  y1="30" x2="50"  y2="38"/>
+    <line x1="50"  y1="38" x2="62"  y2="38"/>
+    <line x1="62"  y1="38" x2="62"  y2="30"/>
+    <line x1="62"  y1="30" x2="74"  y2="30"/>
+    <line x1="74"  y1="30" x2="74"  y2="38"/>
+    <line x1="74"  y1="38" x2="86"  y2="38"/>
+    <line x1="86"  y1="38" x2="86"  y2="30"/>
+    <line x1="86"  y1="30" x2="98"  y2="30"/>
+    <line x1="98"  y1="30" x2="98"  y2="38"/>
+    <line x1="98"  y1="38" x2="110" y2="38"/>
+    <line x1="110" y1="38" x2="110" y2="30"/>
+    <line x1="110" y1="30" x2="122" y2="30"/>
+    <line x1="122" y1="30" x2="134" y2="30"/>
+    <line x1="134" y1="30" x2="146" y2="30"/>
+    <line x1="146" y1="30" x2="158" y2="30"/>
+    <line x1="158" y1="30" x2="170" y2="30"/>
+  </g>
+  <text x="18" y="42" font-family="'Courier New', monospace" font-size="7" fill="#2B7FD4" opacity="0.38">RX</text>
+
+  <!-- Frame estruturado $TIPO:PAYLOAD*XX# — canto inferior esquerdo -->
+  <g font-family="'Courier New', monospace" font-size="9" opacity="0.28">
+    <text x="20" y="228" fill="#F0A500">$</text>
+    <text x="28" y="228" fill="#1A8C6E">REQ</text>
+    <text x="51" y="228" fill="#85B7EB">:</text>
+    <text x="57" y="228" fill="#85B7EB">TEMP</text>
+    <text x="83" y="228" fill="#F0A500">*</text>
+    <text x="89" y="228" fill="#E07070">4A</text>
+    <text x="101" y="228" fill="#F0A500">#</text>
+  </g>
+
+  <!-- Texto de fundo — snippets de código -->
+  <g font-family="'Courier New', monospace" font-size="10" fill="#2B7FD4" opacity="0.18">
+    <text x="28"  y="58">uart.any()</text>
+    <text x="490" y="22">uart.write(b'\\n')</text>
+    <text x="24"  y="110">UART(1, baudrate=9600)</text>
+    <text x="495" y="230">XOR checksum</text>
+    <text x="18"  y="175">ACK / NAK</text>
+    <text x="560" y="112">SOF · EOF</text>
+  </g>
+
+  <!-- Chip / IC decorativo esquerdo -->
+  <g fill="#0A3A56" opacity="0.4">
+    <rect x="172" y="58" width="34" height="26" rx="2"/>
+    <line x1="177" y1="58" x2="177" y2="50" stroke="#0A3A56" stroke-width="0.9" fill="none"/>
+    <line x1="184" y1="58" x2="184" y2="50" stroke="#0A3A56" stroke-width="0.9" fill="none"/>
+    <line x1="191" y1="58" x2="191" y2="50" stroke="#0A3A56" stroke-width="0.9" fill="none"/>
+    <line x1="198" y1="58" x2="198" y2="50" stroke="#0A3A56" stroke-width="0.9" fill="none"/>
+    <line x1="177" y1="84" x2="177" y2="92" stroke="#0A3A56" stroke-width="0.9" fill="none"/>
+    <line x1="184" y1="84" x2="184" y2="92" stroke="#0A3A56" stroke-width="0.9" fill="none"/>
+    <line x1="191" y1="84" x2="191" y2="92" stroke="#0A3A56" stroke-width="0.9" fill="none"/>
+    <line x1="198" y1="84" x2="198" y2="92" stroke="#0A3A56" stroke-width="0.9" fill="none"/>
+  </g>
+
+  <!-- Título principal -->
+  <text x="340" y="112" text-anchor="middle"
+        font-family="Arial, sans-serif" font-size="30" font-weight="700"
+        fill="#A8D4F5" letter-spacing="1">Sistemas Embarcados</text>
+
+  <!-- Subtítulo -->
+  <text x="340" y="144" text-anchor="middle"
+        font-family="Arial, sans-serif" font-size="17" font-weight="400"
+        fill="#1FC99A" letter-spacing="0.5">UART com MicroPython</text>
+
+  <!-- Linha divisória -->
+  <line x1="215" y1="156" x2="465" y2="156" stroke="#0E4C6E" stroke-width="0.6" opacity="0.7"/>
+
+  <!-- Tagline -->
+  <text x="340" y="174" text-anchor="middle"
+        font-family="Arial, sans-serif" font-size="11.5" font-weight="400"
+        fill="#7BB8E8" letter-spacing="0.3">Do Eco ao Protocolo · MicroPython · ESP32 · Wokwi</text>
+
+  <!-- Badge "Mini Curso 02" -->
+  <rect x="290" y="184" width="100" height="18" rx="4" fill="#0E4C6E" opacity="0.7"/>
+  <text x="340" y="196" text-anchor="middle"
+        font-family="Arial, sans-serif" font-size="10" font-weight="600"
+        fill="#A8D4F5" letter-spacing="0.8">MINI CURSO  02</text>
+
+  <!-- Conectores TX/RX decorativos centrais (embaixo) -->
+  <g opacity="0.65">
+    <!-- TX dot -->
+    <circle cx="248" cy="216" r="5" fill="none" stroke="#1A8C6E" stroke-width="1.2"/>
+    <circle cx="248" cy="216" r="2.5" fill="#1A8C6E"/>
+    <line x1="253" y1="216" x2="268" y2="216" stroke="#1A8C6E" stroke-width="0.8"/>
+    <line x1="268" y1="209" x2="268" y2="223" stroke="#1A8C6E" stroke-width="0.8"/>
+    <!-- RX dot -->
+    <circle cx="308" cy="216" r="5" fill="none" stroke="#2B7FD4" stroke-width="1.2"/>
+    <circle cx="308" cy="216" r="2.5" fill="#2B7FD4"/>
+    <line x1="313" y1="216" x2="328" y2="216" stroke="#2B7FD4" stroke-width="0.8"/>
+    <line x1="328" y1="209" x2="328" y2="223" stroke="#2B7FD4" stroke-width="0.8"/>
+    <!-- GND dot -->
+    <circle cx="368" cy="216" r="5" fill="none" stroke="#1FC99A" stroke-width="1.2"/>
+    <circle cx="368" cy="216" r="2.5" fill="#1FC99A"/>
+    <line x1="373" y1="216" x2="388" y2="216" stroke="#1FC99A" stroke-width="0.8"/>
+    <line x1="388" y1="209" x2="388" y2="223" stroke="#1FC99A" stroke-width="0.8"/>
+    <!-- ACK dot -->
+    <circle cx="418" cy="216" r="5" fill="none" stroke="#0E4C6E" stroke-width="1.2"/>
+    <line x1="423" y1="216" x2="438" y2="216" stroke="#0E4C6E" stroke-width="0.8"/>
+    <line x1="438" y1="209" x2="438" y2="223" stroke="#0E4C6E" stroke-width="0.8"/>
+  </g>
+
+  <!-- Borda externa -->
+  <rect x="0" y="0" width="680" height="240" fill="none" stroke="#0E4C6E" stroke-width="1" opacity="0.35"/>
+</svg>
