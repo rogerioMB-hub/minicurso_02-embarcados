@@ -77,7 +77,7 @@ ESP32 ──── cabo USB ──── PC
 
 ### Simulação (Wokwi)
 
-**Componentes:** apenas 1 ESP32 DevKit C v4.
+**Componentes:** apenas 1 ESP32 DevKit C v4. Link: <https://wokwi.com/projects/463768207297676289>
 
 **Conexões no `diagram.json`:**
 
