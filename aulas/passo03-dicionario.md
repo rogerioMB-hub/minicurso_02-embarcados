@@ -72,6 +72,7 @@ else:
 
 Mesmo do passo 1 — apenas ESP32 com Serial Monitor.
 
+Link do Wokwi: < https://wokwi.com/projects/463768887419912193 >
 ```
 esp:TX → $serialMonitor:RX
 esp:RX → $serialMonitor:TX
