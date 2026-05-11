@@ -76,6 +76,8 @@ ESP32 GPIO2 ──► Resistor 330Ω ──► LED (+) ──► GND
 ```
 
 ### Simulação (Wokwi)
+Link: < https://wokwi.com/projects/463768531743913985 >
+
 
 **Componentes:** ESP32 DevKit C v4 + LED + Resistor 330Ω.
 
