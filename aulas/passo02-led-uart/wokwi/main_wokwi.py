@@ -4,42 +4,37 @@
 # ============================================================
 # Placa : ESP32 DevKit C v4  |  IDE: Wokwi
 #
-# uart.read(1) BLOQUEANTE — aguarda o byte.
-# uart.any() não funciona aqui por latência do $serialMonitor.
-# Veja main_placa.py para entender o motivo e a versão correta
-# para uso com hardware real.
+# DIFERENÇA EM RELAÇÃO À PLACA REAL:
+#   Usamos input() para ler do $serialMonitor — confiável no Wokwi.
+#   Na placa real (main_placa.py), usamos uart.any() + uart.read().
 #
-# Como usar: 'L' + Enter → liga | 'D' + Enter → desliga
+# Como usar: digite 'L' + Enter para ligar | 'D' + Enter para desligar
 # ============================================================
 
-from machine import UART, Pin  # type: ignore[import]
+from machine import Pin  # type: ignore[import]
 
-BAUD_RATE = 9600
-LED_PIN   = 2
-
-uart = UART(1, baudrate=BAUD_RATE, tx=Pin(1), rx=Pin(3))
-led  = Pin(LED_PIN, Pin.OUT)
+led = Pin(2, Pin.OUT)
 
 print("=" * 40)
 print("  Passo 2 — Controle de LED  [Wokwi]")
 print("=" * 40)
-print("  'L' → Liga o LED | 'D' → Desliga o LED")
+print("  'L' + Enter → Liga o LED")
+print("  'D' + Enter → Desliga o LED")
 print("=" * 40)
 
 while True:
-    byte = uart.read(1)
-    char = byte.decode()
+    entrada = input(">> ").strip().upper()   # lê e normaliza
 
-    if char == 'L':
+    if entrada == 'L':
         led.value(1)
-        uart.write("LED ligado\n")
-        print("LED ligado")
+        print("LED ligado ✓")
 
-    elif char == 'D':
+    elif entrada == 'D':
         led.value(0)
-        uart.write("LED desligado\n")
-        print("LED desligado")
+        print("LED desligado ✓")
 
-    elif char not in ('\n', '\r'):
-        uart.write("Caractere desconhecido\n")
-        print(f"Desconhecido: {repr(char)}")
+    elif entrada == '':
+        pass   # ignora linha vazia
+
+    else:
+        print(f"Comando '{entrada}' desconhecido. Use L ou D.")
