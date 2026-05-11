@@ -4,21 +4,20 @@
 # ============================================================
 # Placa : ESP32 DevKit C v4  |  IDE: Wokwi
 #
-# uart.read(1) BLOQUEANTE — aguarda o byte.
-# uart.any() não funciona aqui por latência do $serialMonitor.
-# Veja main_placa.py para entender o motivo e a versão correta.
+# DIFERENÇA EM RELAÇÃO À PLACA REAL:
+#   input() entrega a linha completa de uma vez.
+#   Para preservar o comportamento da máquina de estados,
+#   iteramos sobre os caracteres da linha com 'for char in linha'
+#   — simulando a chegada byte a byte, como na placa real.
+#   Na placa real (main_placa.py), os bytes chegam via uart.read(1).
 #
 # Como usar: LED:L  LED:D  MSG:ola  + Enter
 # Observe as transições de estado impressas no monitor.
 # ============================================================
 
-from machine import UART, Pin  # type: ignore[import]
+from machine import Pin  # type: ignore[import]
 
-BAUD_RATE = 9600
-LED_PIN   = 2
-
-uart = UART(1, baudrate=BAUD_RATE, tx=Pin(1), rx=Pin(3))
-led  = Pin(LED_PIN, Pin.OUT)
+led = Pin(2, Pin.OUT)
 
 IDLE        = 'IDLE'
 RECEBENDO   = 'RECEBENDO'
@@ -37,18 +36,10 @@ def cmd_led(arg):
 def cmd_msg(arg):
     print(f"[MSG] {arg}"); return f"Mensagem: {arg}"
 
-comandos = { 'LED': cmd_led, 'MSG': cmd_msg }
+comandos = {'LED': cmd_led, 'MSG': cmd_msg}
 
-def no_idle(char):
-    return IDLE if char in ('\n', '\r', ' ') else RECEBENDO
-
-def no_recebendo(char, buf):
-    if char == '\n':   return PROCESSANDO, buf
-    elif char == '\r': return RECEBENDO, buf
-    else:              return RECEBENDO, buf + char
-
-def processar(buffer):
-    linha = buffer.strip()
+def processar(buf):
+    linha = buf.strip()
     if ':' not in linha:
         return "Formato inválido. Use COMANDO:ARGUMENTO"
     partes  = linha.split(':', 1)
@@ -65,25 +56,30 @@ print("  Formato: COMANDO:ARGUMENTO + Enter")
 print("=" * 40)
 
 while True:
-    byte  = uart.read(1)
-    char  = byte.decode()
+    linha = input(">> ")      # lê linha completa do terminal
+    linha += '\n'             # reinsere '\n' para acionar transição PROCESSANDO
 
-    if estado == IDLE:
-        proximo = no_idle(char)
-        if proximo == RECEBENDO:
-            buffer = char
-        estado = proximo
-        print(f"[{estado}]", end=' ')
+    # itera caractere a caractere — simula chegada byte a byte
+    for char in linha:
 
-    elif estado == RECEBENDO:
-        proximo, buffer = no_recebendo(char, buffer)
-        estado = proximo
-        print(f"[{estado}]", end=' ')
+        if estado == IDLE:
+            if char not in ('\n', '\r', ' '):
+                buffer = char
+                estado = RECEBENDO
+                print(f"[{estado}]", end=' ')
 
-    if estado == PROCESSANDO:
-        resposta = processar(buffer)
-        uart.write(resposta + '\n')
-        print(f"\n>> {resposta}")
-        buffer = ''
-        estado = IDLE
-        print(f"[{estado}]", end=' ')
+        elif estado == RECEBENDO:
+            if char == '\n':
+                estado = PROCESSANDO
+            elif char != '\r':
+                buffer += char
+            print(f"[{estado}]", end=' ')
+
+        if estado == PROCESSANDO:
+            resposta = processar(buffer)
+            print(f"\n>> {resposta}")
+            buffer = ''
+            estado = IDLE
+            print(f"[{estado}]", end=' ')
+
+    print()   # quebra de linha ao final de cada entrada
