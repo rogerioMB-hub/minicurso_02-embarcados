@@ -5,153 +5,36 @@ title: "Passo 3 — Dicionário de Comandos"
 
 # Passo 3 — Dicionário de Comandos
 
-> **Duração estimada:** 20 minutos  
+> **Duração estimada:** 20 minutos
 > **Fase:** 1 de 4 — PC ↔ Placa via Serial Monitor
 
 ---
 
 ## Simulação e Código
 
-### Arquivos do projeto Wokwi
+> **O código completo está disponível nos arquivos abaixo.** Copie cada um para a aba correspondente no Wokwi antes de iniciar o experimento.
 
 | Arquivo | Descrição | Link |
 |---------|-----------|------|
 | `diagram.json` | Circuito no simulador | [abrir](https://github.com/rogerioMB-hub/minicurso_02-embarcados/blob/main/aulas/passo03-dicionario/wokwi/diagram.json) |
 | `wokwi.toml` | Configuração do projeto | [abrir](https://github.com/rogerioMB-hub/minicurso_02-embarcados/blob/main/aulas/passo03-dicionario/wokwi/wokwi.toml) |
 | `main_wokwi.py` | Código para o Wokwi | [abrir](https://github.com/rogerioMB-hub/minicurso_02-embarcados/blob/main/aulas/passo03-dicionario/wokwi/main_wokwi.py) |
-| `main_placa.py` | Código para ESP32 / Pico real | [abrir](https://github.com/rogerioMB-hub/minicurso_02-embarcados/blob/main/aulas/passo03-dicionario/wokwi/main_placa.py) |
-
-> **Como usar:** copie o conteúdo de cada arquivo para as abas correspondentes em [wokwi.com/projects/new/micropython-esp32](https://wokwi.com/projects/new/micropython-esp32).
-
----
+| `main_placa.py` | Código para ESP32 real (Thonny) | [abrir](https://github.com/rogerioMB-hub/minicurso_02-embarcados/blob/main/aulas/passo03-dicionario/wokwi/main_placa.py) |
 
 ### ⚠️ Por que dois arquivos de código?
 
 | | `main_wokwi.py` | `main_placa.py` |
 |---|---|---|
-| **Leitura UART** | `uart.read(1)` bloqueante | `if uart.any(): uart.read(1)` |
-| **Comportamento** | Aguarda o byte chegar | Verifica e segue em frente |
-| **Uso** | Wokwi (simulação) | ESP32 / Raspberry Pi Pico |
+| **Leitura do terminal** | `input()` — lê linha do $serialMonitor | `if uart.any(): uart.read(1)` |
+| **Comportamento** | Aguarda a linha completa (bloqueante) | Verifica byte a byte sem bloquear |
+| **Uso** | Wokwi (simulação) | ESP32 com Thonny |
 
-**Por que `uart.any()` não funciona no Wokwi?**
-O `$serialMonitor` entrega bytes com latência de simulação. `uart.any()` consulta o buffer naquele instante — retorna `0` antes do byte chegar e o programa o ignora. Na placa real, o driver de hardware preenche o buffer imediatamente, sem latência.
-
----
-
-### `main_wokwi.py` — para o Wokwi
-
-```python
-# ============================================================
-# Passo 3 — Dicionário de Comandos via UART
-# Versão: SIMULAÇÃO WOKWI
-# ============================================================
-# Placa : ESP32 DevKit C v4  |  IDE: Wokwi
-#
-# uart.read(1) BLOQUEANTE — aguarda o byte.
-# uart.any() não funciona aqui por latência do $serialMonitor.
-# Veja main_placa.py para entender o motivo e a versão correta.
-#
-# Como usar: envie um dígito de 1 a 9 + Enter
-# ============================================================
-
-from machine import UART, Pin  # type: ignore[import]
-
-BAUD_RATE = 9600
-uart = UART(1, baudrate=BAUD_RATE, tx=Pin(1), rx=Pin(3))
-
-digitos = {
-    '1': 'um',    '2': 'dois',   '3': 'três',
-    '4': 'quatro','5': 'cinco',  '6': 'seis',
-    '7': 'sete',  '8': 'oito',   '9': 'nove',
-}
-
-print("=" * 40)
-print("  Passo 3 — Dicionário via UART  [Wokwi]")
-print("=" * 40)
-print("  Envie um dígito de 1 a 9")
-print("=" * 40)
-
-while True:
-    byte = uart.read(1)
-    char = byte.decode()
-
-    if char in digitos:
-        resposta = digitos[char]
-        uart.write(resposta + '
-')
-        print(f"'{char}' → {resposta}")
-
-    elif char not in ('
-', ''):
-        uart.write("Caractere desconhecido
-")
-        print(f"Desconhecido: {repr(char)}")
-```
+> **Por que `uart.any()` não funciona no Wokwi?**
+> O `$serialMonitor` entrega bytes com latência de simulação — `uart.any()` retorna `0` antes do byte chegar.
+> No Wokwi usamos `input()`. Na placa real com Thonny, `uart.any()` funciona corretamente.
 
 ---
 
-### `main_placa.py` — para ESP32 / Raspberry Pi Pico
-
-```python
-# ============================================================
-# Passo 3 — Dicionário de Comandos via UART
-# Versão: PLACA REAL (ESP32 / Raspberry Pi Pico)
-# ============================================================
-# Placa : ESP32 DevKit  ou  Raspberry Pi Pico  |  IDE: Thonny
-#
-# ------------------------------------
-# Por que uart.any() na placa real?
-# ------------------------------------
-#   uart.any() é não bloqueante: o loop continua rodando
-#   mesmo sem dados disponíveis, liberando o processador
-#   para outras tarefas. Na placa real o buffer é preenchido
-#   pelo driver de hardware sem latência.
-#
-# ------------------------------------
-# Por que uart.any() NÃO funciona no Wokwi?
-# ------------------------------------
-#   O $serialMonitor entrega bytes com latência. uart.any()
-#   consulta o buffer antes do byte chegar — retorna 0 e o
-#   byte é ignorado. Solução no Wokwi: uart.read(1) bloqueante
-#   (veja main_wokwi.py).
-# ============================================================
-
-from machine import UART
-
-BAUD_RATE = 9600
-uart = UART(0, baudrate=BAUD_RATE)
-
-digitos = {
-    '1': 'um',    '2': 'dois',   '3': 'três',
-    '4': 'quatro','5': 'cinco',  '6': 'seis',
-    '7': 'sete',  '8': 'oito',   '9': 'nove',
-}
-
-print("=" * 40)
-print("  Passo 3 — Dicionário via UART  [Placa]")
-print("=" * 40)
-print("  Envie um dígito de 1 a 9")
-print("=" * 40)
-
-while True:
-    if uart.any():
-        byte = uart.read(1)
-        char = byte.decode()
-
-        if char in digitos:
-            resposta = digitos[char]
-            uart.write(resposta + '
-')
-            print(f"'{char}' → {resposta}")
-
-        elif char not in ('
-', ''):
-            uart.write("Caractere desconhecido
-")
-            print(f"Desconhecido: {repr(char)}")
-```
-
----
 ## Objetivos
 
 Ao final deste passo você será capaz de:
@@ -198,38 +81,17 @@ esp:RX → $serialMonitor:TX
 
 ## 3. Código
 
+> O código completo está nos arquivos linkados acima (`main_wokwi.py` e `main_placa.py`).
+> Abaixo estão os trechos essenciais para leitura e compreensão.
+
+Trecho central — lookup no dicionário (versão placa real):
+
 ```python
-# ============================================================
-# Passo 3 — Dicionário de Dígitos por Extenso via UART
-# ============================================================
-
-from machine import UART
-
-UART_ID   = 0
-BAUD_RATE = 9600
-
-uart = UART(UART_ID, baudrate=BAUD_RATE)
-
-# Dicionário: chave = caractere recebido, valor = resposta
-# As chaves são STRINGS pois a UART entrega caracteres de texto
 digitos = {
-    '1': 'um',
-    '2': 'dois',
-    '3': 'três',
-    '4': 'quatro',
-    '5': 'cinco',
-    '6': 'seis',
-    '7': 'sete',
-    '8': 'oito',
-    '9': 'nove',
+    '1': 'um',   '2': 'dois',  '3': 'três',
+    '4': 'quatro','5': 'cinco', '6': 'seis',
+    '7': 'sete', '8': 'oito',  '9': 'nove',
 }
-
-print("=" * 40)
-print("  Passo 3 — Dicionário via UART")
-print("=" * 40)
-print(f"  UART{UART_ID} | {BAUD_RATE} bps")
-print("  Envie um dígito de 1 a 9")
-print("=" * 40)
 
 while True:
     if uart.any():
@@ -243,7 +105,6 @@ while True:
 
         elif char not in ('\n', '\r'):
             uart.write("Caractere desconhecido\n")
-            print(f"Desconhecido: {repr(char)}")
 ```
 
 ---
@@ -292,7 +153,7 @@ padroes = {
 }
 ```
 
-**Desafio 2:** use o dicionário para mapear letras a ações com funções:
+**Desafio 2:** use o dicionário para mapear letras a funções:
 
 ```python
 def ligar():  return "LED ligado"
@@ -310,7 +171,7 @@ if char in acoes:
 
 ## Resumo
 
-- Um dicionário Python funciona como uma tabela de lookup: `O(1)`, sem `if/elif` aninhados
+- Um dicionário Python funciona como uma tabela de lookup: acesso O(1), sem `if/elif` aninhados
 - O operador `in` verifica a chave com segurança antes do acesso
 - Adicionar comandos = adicionar entradas ao dicionário, sem alterar a lógica principal
 - No próximo passo, os comandos deixarão de ser caracteres únicos e passarão a ser **strings completas com argumentos**

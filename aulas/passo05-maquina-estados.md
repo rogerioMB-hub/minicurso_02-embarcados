@@ -5,249 +5,37 @@ title: "Passo 5 — Máquina de Estados para Recepção UART"
 
 # Passo 5 — Máquina de Estados para Recepção UART
 
-> **Duração estimada:** 30 minutos  
+> **Duração estimada:** 30 minutos
 > **Fase:** 2 de 4 — Estrutura e robustez
 
 ---
 
 ## Simulação e Código
 
-### Arquivos do projeto Wokwi
+> **O código completo está disponível nos arquivos abaixo.** Copie cada um para a aba correspondente no Wokwi antes de iniciar o experimento.
 
 | Arquivo | Descrição | Link |
 |---------|-----------|------|
 | `diagram.json` | Circuito no simulador | [abrir](https://github.com/rogerioMB-hub/minicurso_02-embarcados/blob/main/aulas/passo05-maquina-estados/wokwi/diagram.json) |
 | `wokwi.toml` | Configuração do projeto | [abrir](https://github.com/rogerioMB-hub/minicurso_02-embarcados/blob/main/aulas/passo05-maquina-estados/wokwi/wokwi.toml) |
 | `main_wokwi.py` | Código para o Wokwi | [abrir](https://github.com/rogerioMB-hub/minicurso_02-embarcados/blob/main/aulas/passo05-maquina-estados/wokwi/main_wokwi.py) |
-| `main_placa.py` | Código para ESP32 / Pico real | [abrir](https://github.com/rogerioMB-hub/minicurso_02-embarcados/blob/main/aulas/passo05-maquina-estados/wokwi/main_placa.py) |
-
-> **Como usar:** copie o conteúdo de cada arquivo para as abas correspondentes em [wokwi.com/projects/new/micropython-esp32](https://wokwi.com/projects/new/micropython-esp32).
-
----
+| `main_placa.py` | Código para ESP32 real (Thonny) | [abrir](https://github.com/rogerioMB-hub/minicurso_02-embarcados/blob/main/aulas/passo05-maquina-estados/wokwi/main_placa.py) |
 
 ### ⚠️ Por que dois arquivos de código?
 
 | | `main_wokwi.py` | `main_placa.py` |
 |---|---|---|
-| **Leitura UART** | `uart.read(1)` bloqueante | `if uart.any(): uart.read(1)` |
-| **Comportamento** | Aguarda o byte chegar | Verifica e segue em frente |
-| **Uso** | Wokwi (simulação) | ESP32 / Raspberry Pi Pico |
+| **Leitura do terminal** | `input()` + `for char in linha` (simula bytes chegando um a um) | `if uart.any(): uart.read(1)` |
+| **Comportamento** | Itera sobre a string para acionar as transições da FSM | Byte a byte em tempo real |
+| **Uso** | Wokwi (simulação) | ESP32 com Thonny |
 
-**Por que `uart.any()` não funciona no Wokwi?**
-O `$serialMonitor` entrega bytes com latência de simulação. `uart.any()` consulta o buffer naquele instante — retorna `0` antes do byte chegar e o programa o ignora. Na placa real, o driver de hardware preenche o buffer imediatamente, sem latência.
-
----
-
-### `main_wokwi.py` — para o Wokwi
-
-```python
-# ============================================================
-# Passo 5 — Máquina de Estados para Recepção UART
-# Versão: SIMULAÇÃO WOKWI
-# ============================================================
-# Placa : ESP32 DevKit C v4  |  IDE: Wokwi
-#
-# uart.read(1) BLOQUEANTE — aguarda o byte.
-# uart.any() não funciona aqui por latência do $serialMonitor.
-# Veja main_placa.py para entender o motivo e a versão correta.
-#
-# Como usar: LED:L  LED:D  MSG:ola  + Enter
-# Observe as transições de estado impressas no monitor.
-# ============================================================
-
-from machine import UART, Pin  # type: ignore[import]
-
-BAUD_RATE = 9600
-LED_PIN   = 2
-
-uart = UART(1, baudrate=BAUD_RATE, tx=Pin(1), rx=Pin(3))
-led  = Pin(LED_PIN, Pin.OUT)
-
-IDLE        = 'IDLE'
-RECEBENDO   = 'RECEBENDO'
-PROCESSANDO = 'PROCESSANDO'
-
-estado = IDLE
-buffer = ''
-
-def cmd_led(arg):
-    if arg == 'L':
-        led.value(1); return "LED ligado"
-    elif arg == 'D':
-        led.value(0); return "LED desligado"
-    return f"Argumento inválido: '{arg}'"
-
-def cmd_msg(arg):
-    print(f"[MSG] {arg}"); return f"Mensagem: {arg}"
-
-comandos = { 'LED': cmd_led, 'MSG': cmd_msg }
-
-def no_idle(char):
-    return IDLE if char in ('
-', '', ' ') else RECEBENDO
-
-def no_recebendo(char, buf):
-    if char == '
-':   return PROCESSANDO, buf
-    elif char == '': return RECEBENDO, buf
-    else:              return RECEBENDO, buf + char
-
-def processar(buffer):
-    linha = buffer.strip()
-    if ':' not in linha:
-        return "Formato inválido. Use COMANDO:ARGUMENTO"
-    partes  = linha.split(':', 1)
-    comando = partes[0].upper()
-    if comando in comandos:
-        return comandos[comando](partes[1])
-    return f"Comando desconhecido: '{comando}'"
-
-print("=" * 40)
-print("  Passo 5 — Máquina de Estados  [Wokwi]")
-print("=" * 40)
-print(f"  Estado inicial: {estado}")
-print("  Formato: COMANDO:ARGUMENTO + Enter")
-print("=" * 40)
-
-while True:
-    byte  = uart.read(1)
-    char  = byte.decode()
-
-    if estado == IDLE:
-        proximo = no_idle(char)
-        if proximo == RECEBENDO:
-            buffer = char
-        estado = proximo
-        print(f"[{estado}]", end=' ')
-
-    elif estado == RECEBENDO:
-        proximo, buffer = no_recebendo(char, buffer)
-        estado = proximo
-        print(f"[{estado}]", end=' ')
-
-    if estado == PROCESSANDO:
-        resposta = processar(buffer)
-        uart.write(resposta + '
-')
-        print(f"
->> {resposta}")
-        buffer = ''
-        estado = IDLE
-        print(f"[{estado}]", end=' ')
-```
+> **Por que `uart.any()` não funciona no Wokwi?**
+> O `$serialMonitor` entrega bytes com latência — `uart.any()` retorna `0` antes do byte chegar.
+> No Wokwi usamos `input()` e iteramos sobre cada caractere com `for char in linha` para preservar o comportamento da FSM.
+> Na placa real com Thonny, `uart.any()` funciona e os bytes alimentam a FSM em tempo real.
 
 ---
 
-### `main_placa.py` — para ESP32 / Raspberry Pi Pico
-
-```python
-# ============================================================
-# Passo 5 — Máquina de Estados para Recepção UART
-# Versão: PLACA REAL (ESP32 / Raspberry Pi Pico)
-# ============================================================
-# Placa : ESP32 DevKit  ou  Raspberry Pi Pico  |  IDE: Thonny
-#
-# ------------------------------------
-# Por que uart.any() na placa real?
-# ------------------------------------
-#   Padrão não bloqueante essencial em FSMs: o sistema
-#   permanece responsivo mesmo em estado IDLE, sem travar
-#   aguardando dados. Na placa real, o driver de hardware
-#   preenche o buffer sem latência.
-#
-# ------------------------------------
-# Por que uart.any() NÃO funciona no Wokwi?
-# ------------------------------------
-#   O $serialMonitor tem latência na entrega dos bytes.
-#   uart.any() retorna 0 antes do byte chegar — a transição
-#   IDLE→RECEBENDO nunca acontece e o primeiro byte é perdido.
-#   No Wokwi usamos uart.read(1) bloqueante (main_wokwi.py).
-# ============================================================
-
-from machine import UART, Pin
-
-BAUD_RATE = 9600
-LED_PIN   = 2
-
-uart = UART(0, baudrate=BAUD_RATE)
-led  = Pin(LED_PIN, Pin.OUT)
-
-IDLE        = 'IDLE'
-RECEBENDO   = 'RECEBENDO'
-PROCESSANDO = 'PROCESSANDO'
-
-estado = IDLE
-buffer = ''
-
-def cmd_led(arg):
-    if arg == 'L':
-        led.value(1); return "LED ligado"
-    elif arg == 'D':
-        led.value(0); return "LED desligado"
-    return f"Argumento inválido: '{arg}'"
-
-def cmd_msg(arg):
-    print(f"[MSG] {arg}"); return f"Mensagem: {arg}"
-
-comandos = { 'LED': cmd_led, 'MSG': cmd_msg }
-
-def no_idle(char):
-    return IDLE if char in ('
-', '', ' ') else RECEBENDO
-
-def no_recebendo(char, buf):
-    if char == '
-':   return PROCESSANDO, buf
-    elif char == '': return RECEBENDO, buf
-    else:              return RECEBENDO, buf + char
-
-def processar(buffer):
-    linha = buffer.strip()
-    if ':' not in linha:
-        return "Formato inválido. Use COMANDO:ARGUMENTO"
-    partes  = linha.split(':', 1)
-    comando = partes[0].upper()
-    if comando in comandos:
-        return comandos[comando](partes[1])
-    return f"Comando desconhecido: '{comando}'"
-
-print("=" * 40)
-print("  Passo 5 — Máquina de Estados  [Placa]")
-print("=" * 40)
-print(f"  Estado inicial: {estado}")
-print("  Formato: COMANDO:ARGUMENTO + Enter")
-print("=" * 40)
-
-while True:
-    if uart.any():
-        byte  = uart.read(1)
-        char  = byte.decode()
-
-        if estado == IDLE:
-            proximo = no_idle(char)
-            if proximo == RECEBENDO:
-                buffer = char
-            estado = proximo
-            print(f"[{estado}]", end=' ')
-
-        elif estado == RECEBENDO:
-            proximo, buffer = no_recebendo(char, buffer)
-            estado = proximo
-            print(f"[{estado}]", end=' ')
-
-        if estado == PROCESSANDO:
-            resposta = processar(buffer)
-            uart.write(resposta + '
-')
-            print(f"
->> {resposta}")
-            buffer = ''
-            estado = IDLE
-            print(f"[{estado}]", end=' ')
-    # aqui poderiam vir outras tarefas: ler sensor, timeout, etc.
-```
-
----
 ## Objetivos
 
 Ao final deste passo você será capaz de:
@@ -288,47 +76,15 @@ Mesmo do passo 4 — ESP32 com Serial Monitor e LED no GPIO2.
 
 ## 3. Código
 
+> O código completo está nos arquivos linkados acima (`main_wokwi.py` e `main_placa.py`).
+> Abaixo estão os trechos essenciais para leitura e compreensão.
+
+Estrutura das funções de transição:
+
 ```python
-# ============================================================
-# Passo 5 — Máquina de Estados para Recepção UART
-# ============================================================
-
-from machine import UART, Pin
-
-UART_ID   = 0
-BAUD_RATE = 9600
-LED_PIN   = 2
-
-uart = UART(UART_ID, baudrate=BAUD_RATE)
-led  = Pin(LED_PIN, Pin.OUT)
-
-# --- Estados (constantes nomeadas — evita "números mágicos") ---
 IDLE        = 'IDLE'
 RECEBENDO   = 'RECEBENDO'
 PROCESSANDO = 'PROCESSANDO'
-
-estado = IDLE   # estado inicial
-buffer = ''
-
-# --- funções de comando ---
-
-def cmd_led(argumento):
-    if argumento == 'L':
-        led.value(1)
-        return "LED ligado"
-    elif argumento == 'D':
-        led.value(0)
-        return "LED desligado"
-    else:
-        return f"Argumento inválido: '{argumento}'"
-
-def cmd_msg(argumento):
-    print(f"[MSG] {argumento}")
-    return f"Mensagem: {argumento}"
-
-comandos = { 'LED': cmd_led, 'MSG': cmd_msg }
-
-# --- funções de estado ---
 
 def no_idle(char):
     """IDLE: ignora ruído; qualquer byte útil inicia recepção."""
@@ -345,27 +101,11 @@ def no_recebendo(char, buf):
         return RECEBENDO, buf          # ignora '\r' (Windows)
     else:
         return RECEBENDO, buf + char   # acumula
+```
 
-def processar(buffer):
-    """PROCESSANDO: interpreta e executa."""
-    linha = buffer.strip()
-    if ':' not in linha:
-        return "Formato inválido. Use COMANDO:ARGUMENTO"
-    partes    = linha.split(':', 1)
-    comando   = partes[0].upper()
-    argumento = partes[1]
-    if comando in comandos:
-        return comandos[comando](argumento)
-    return f"Comando desconhecido: '{comando}'"
+Loop principal com transições explícitas (versão placa real):
 
-print("=" * 40)
-print("  Passo 5 — Máquina de Estados UART")
-print(f"  Estado inicial: {estado}")
-print("  Formato: COMANDO:ARGUMENTO + Enter")
-print("=" * 40)
-
-# --- loop principal com transições de estado explícitas ---
-
+```python
 while True:
     if uart.any():
         byte = uart.read(1)
@@ -389,7 +129,6 @@ while True:
             print(f"\n>> {resposta}")
             buffer = ''
             estado = IDLE
-            print(f"[{estado}]", end=' ')
 ```
 
 ---
@@ -418,7 +157,7 @@ Execute o código e observe as transições de estado no terminal.
 
 ## 5. Desafio
 
-**Desafio:** adicione um quarto estado `ERRO` que o sistema entra quando recebe um caractere inválido (ex: bytes fora da faixa ASCII imprimível). No estado `ERRO`, o sistema descarta tudo até receber `'\n'`, depois volta ao IDLE:
+**Desafio:** adicione um quarto estado `ERRO` que o sistema entra quando recebe um caractere inválido. No estado `ERRO`, o sistema descarta tudo até receber `'\n'`, depois volta ao IDLE:
 
 ```python
 ERRO = 'ERRO'
