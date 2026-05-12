@@ -72,6 +72,8 @@ IDLE ──► RECEBENDO ──► PROCESSANDO ──► IDLE
 
 Mesmo do passo 4 — ESP32 com Serial Monitor e LED no GPIO2.
 
+lINK WOKWI: < https://wokwi.com/projects/463769688852953089 >
+
 ---
 
 ## 3. Código
