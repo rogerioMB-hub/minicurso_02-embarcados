@@ -48,23 +48,82 @@ Ao final deste passo você será capaz de:
 
 ## 1. Conceito
 
-No passo 4, o buffer acumulava bytes sem critério. Se chegassem dados corrompidos ou fora de ordem, o sistema tentaria processar uma mensagem mal formada sem perceber.
+### O problema do passo 4
 
-A **Máquina de Estados** resolve isso tornando o comportamento **explícito**:
+No passo 4, o buffer acumulava bytes assim que chegavam — sem verificar se eram bytes úteis ou ruído. Imagine que o terminal envie um `'\r'` sozinho, ou que a linha tenha ruído elétrico e chegue um byte aleatório antes da mensagem. O sistema tentaria processar uma mensagem malformada sem perceber.
+
+O passo 4 funciona bem em condições ideais. Mas em sistemas reais — cabos longos, interferência, conexão instável — o comportamento imprevisível é um problema sério.
+
+---
+
+### A solução: Máquina de Estados Finitos (FSM)
+
+Uma **Máquina de Estados Finitos** (do inglês *Finite State Machine* — FSM) é um modelo de comportamento onde o sistema:
+
+- Está sempre em **um único estado por vez**
+- Só muda de estado quando uma **condição específica** é satisfeita
+- Sabe **exatamente o que fazer** em cada estado e **o que ignorar**
+
+Você já trabalhou com esse conceito no Mini Curso 01, Aula 5. Aqui aplicamos a mesma ideia à recepção serial.
+
+---
+
+### Os três estados da recepção
+
+O receptor UART deste passo tem três estados bem definidos:
+
+| Estado | O sistema está... | Aceita | Ignora |
+|--------|-------------------|--------|--------|
+| `IDLE` | Aguardando início de mensagem | Qualquer byte imprimível | `'\n'`, `'\r'`, espaços |
+| `RECEBENDO` | Acumulando bytes no buffer | Bytes imprimíveis e `'\n'` | `'\r'` |
+| `PROCESSANDO` | Executando o comando | — | — (transição imediata) |
+
+---
+
+### O diagrama de estados
+
+O diagrama abaixo mostra os três estados (círculos) e as condições de cada transição (setas):
 
 ```
-IDLE ──► RECEBENDO ──► PROCESSANDO ──► IDLE
-  ↑                                      │
-  └──────────────────────────────────────┘
+                    byte imprimível
+                   ┌──────────────────────────────────────────┐
+                   │                                          │
+    início         ▼         byte imprimível                 │
+      ──►  ( IDLE ) ─────────────────────► ( RECEBENDO ) ───┘
+              │  ▲                               │
+   '\n''\r'' │  │                               │ '\n' recebido
+   ' ' (ruído)│  │  processamento concluído      │
+              │  │  (volta ao IDLE)              ▼
+              │  └──────────────── ( PROCESSANDO )
+              │                          │
+              └──────────────────────────┘
+                   '\n''\r'' ' ' (ruído ignorado)
 ```
 
-| Estado | O que faz |
-|--------|-----------|
-| `IDLE` | Aguarda o primeiro byte válido da mensagem |
-| `RECEBENDO` | Acumula bytes no buffer até o terminador `'\n'` |
-| `PROCESSANDO` | Executa o comando e volta ao IDLE |
+> **Lendo o diagrama:**
+> - Em `IDLE`, bytes de ruído (`'\r'`, `'\n'`, espaços) são descartados — o sistema fica parado, sem acumular lixo no buffer
+> - O **primeiro byte imprimível** dispara a transição para `RECEBENDO` e inicia o buffer com esse byte
+> - Em `RECEBENDO`, cada byte imprimível é acumulado; ao chegar `'\n'`, vai para `PROCESSANDO`
+> - `PROCESSANDO` executa o comando e retorna imediatamente ao `IDLE`
 
-> **Por que isso importa?** Em `IDLE`, ruído na linha (bytes soltos, `'\r'`, espaços) é **ignorado** explicitamente — em vez de ser silenciosamente acumulado no buffer.
+![Diagrama de estados — FSM UART](../assets/grafo-fsm-uart.png)
+---
+
+### Comparando passo 4 e passo 5
+
+| Situação | Passo 4 | Passo 5 (FSM) |
+|----------|---------|---------------|
+| Recebe `'\r'` antes da mensagem | Acumula no buffer | Ignora em IDLE |
+| Recebe byte de ruído no início | Acumula no buffer | Ignora em IDLE |
+| Recebe `'\n'` vazio | Processa string vazia | Ignora em IDLE |
+| Mensagem válida `LED:L\n` | Funciona | Funciona |
+| Comportamento com ruído | Imprevisível | Previsível e controlado |
+
+---
+
+### Por que isso importa em sistemas embarcados?
+
+Em automação industrial, protocolos seriais precisam ser robustos. Um CLP (Controlador Lógico Programável) não pode "travar" ou executar comandos errados por causa de ruído na linha. A FSM garante que o sistema só processe o que for válido — e ignore tudo o mais de forma explícita e documentada.
 
 ---
 
@@ -72,7 +131,7 @@ IDLE ──► RECEBENDO ──► PROCESSANDO ──► IDLE
 
 Mesmo do passo 4 — ESP32 com Serial Monitor e LED no GPIO2.
 
-lINK WOKWI: < https://wokwi.com/projects/463769688852953089 >
+Link wokwi: < https://wokwi.com/projects/463769688852953089 >
 
 ---
 
