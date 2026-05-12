@@ -131,7 +131,7 @@ Em automação industrial, protocolos seriais precisam ser robustos. Um CLP (Con
 
 Mesmo do passo 4 — ESP32 com Serial Monitor e LED no GPIO2.
 
-Link wokwi: < https://wokwi.com/projects/463769688852953089 >
+Link wokwi: [abrir](https://wokwi.com/projects/463769688852953089)
 
 ---
 
