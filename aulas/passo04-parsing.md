@@ -77,6 +77,8 @@ Exemplos:
 
 ESP32 com Serial Monitor + LED externo no GPIO2.
 
+Link do Wokwi: < https://wokwi.com/projects/463769094749642753 >
+
 ```
 esp:TX  → $serialMonitor:RX
 esp:RX  → $serialMonitor:TX
