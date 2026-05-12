@@ -48,6 +48,26 @@ Ao final deste passo você será capaz de:
 
 ## 1. Conceito
 
+### O que é parsing?
+
+**Parsing** é o processo de analisar um texto (ou sequência de bytes) para extrair informações estruturadas dele. O nome vem do inglês *to parse* — analisar, decompor.
+
+Você já faz parsing intuitivamente quando lê um endereço como `Rua das Flores, 123 — Sala 4`: automaticamente identifica que `Rua das Flores` é o logradouro, `123` é o número e `Sala 4` é o complemento. Um programa precisa fazer o mesmo de forma explícita.
+
+Em comunicação serial, parsing significa **receber uma sequência de bytes e identificar o que cada parte significa**:
+
+```
+Bytes recebidos:   L E D : L \n
+                   ─────   ─   ─
+                  comando  arg  fim
+```
+
+O parser lê os bytes, encontra o separador `:`, e sabe que tudo antes é o comando e tudo depois é o argumento. O `\n` sinaliza que a mensagem acabou.
+
+> **Analogia:** um parser serial faz o mesmo que você faz ao ler um e-mail — identifica remetente, assunto e corpo separando cada parte pelo formato esperado. Se o formato mudar (ex: sem assunto), o parser precisa tratar isso como erro.
+
+---
+
 Até aqui, cada byte recebido era um comando completo. Na prática, os comandos precisam de **argumentos**: `LED:L` para ligar, `LED:D` para desligar, `MSG:ola` para exibir texto.
 
 O problema: a UART entrega bytes um de cada vez, sem saber onde começa ou termina uma mensagem. A solução é definir um **terminador** — um caractere especial que marca o fim da mensagem. Usamos `'\n'` (o Enter do teclado).
@@ -77,7 +97,7 @@ Exemplos:
 
 ESP32 com Serial Monitor + LED externo no GPIO2.
 
-Link do Wokwi: < https://wokwi.com/projects/463769094749642753 >
+Link wokwi: < https://wokwi.com/projects/463769094749642753 >
 
 ```
 esp:TX  → $serialMonitor:RX
