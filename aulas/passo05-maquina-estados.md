@@ -86,12 +86,12 @@ O diagrama abaixo mostra os três estados (círculos) e as condições de cada t
 
 ```
                     byte imprimível
-                   ┌──────────────────────────────────────────┐
-                   │                                          │
-    início         ▼         byte imprimível                 │
+               ┌────────────────────────────────────────────┐
+               │                                            │
+    início     ▼         byte imprimível                    │
       ──►  ( IDLE ) ─────────────────────► ( RECEBENDO ) ───┘
               │  ▲                               │
-   '\n''\r'' │  │                               │ '\n' recebido
+   '\n''\r''  │  │                               │ '\n' recebido
    ' ' (ruído)│  │  processamento concluído      │
               │  │  (volta ao IDLE)              ▼
               │  └──────────────── ( PROCESSANDO )
