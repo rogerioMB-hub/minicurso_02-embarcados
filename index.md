@@ -5,7 +5,7 @@ title: Início
 
 # UART com MicroPython — Do Eco ao Protocolo
 
-![Banner do curso](./assets/banner.svg)
+![Banner do curso](https://rogeriomb-hub.github.io/minicurso_02-embarcados/assets/banner.svg)
 
 > **Mini Curso 02** — Estudo dirigido para alunos do Curso Técnico em Automação Industrial.  
 > Plataforma: ESP32 com MicroPython · Simulador: [Wokwi](https://wokwi.com)  
@@ -48,34 +48,34 @@ Tudo se une em um mini-protocolo com frame estruturado (`$TIPO:PAYLOAD*XX#`), co
 
 | Passo | Título | Conceito introduzido | Entregável |
 |-------|--------|----------------------|------------|
-| [1](./aulas/passo01-eco-serial) | Eco Serial | `uart.read()`, `uart.write()` | Bytes ecoados de volta ao terminal |
-| [2](./aulas/passo02-led-uart) | Controle de LED | Decisão por char, `if/elif/else` | LED ligado/desligado por comando serial |
-| [3](./aulas/passo03-dicionario) | Dicionário de comandos | `dict`, operador `in`, despacho por chave | Respostas por extenso via lookup table |
+| [1](https://rogeriomb-hub.github.io/minicurso_02-embarcados/aulas/passo01-eco-serial) | Eco Serial | `uart.read()`, `uart.write()` | Bytes ecoados de volta ao terminal |
+| [2](https://rogeriomb-hub.github.io/minicurso_02-embarcados/aulas/passo02-led-uart) | Controle de LED | Decisão por char, `if/elif/else` | LED ligado/desligado por comando serial |
+| [3](https://rogeriomb-hub.github.io/minicurso_02-embarcados/aulas/passo03-dicionario) | Dicionário de comandos | `dict`, operador `in`, despacho por chave | Respostas por extenso via lookup table |
 
 ### Fase 2 — Estrutura e robustez
 *Ainda um dispositivo, mas com comunicação estruturada e à prova de falhas.*
 
 | Passo | Título | Conceito introduzido | Entregável |
 |-------|--------|----------------------|------------|
-| [4](./aulas/passo04-parsing) | Parsing com terminador | Buffer, terminador `'\n'`, `split()` | Comandos com argumento: `LED:L`, `MSG:texto` |
-| [5](./aulas/passo05-maquina-estados) | Máquina de estados | FSM — IDLE / RECEBENDO / PROCESSANDO | Recepção robusta com estados explícitos |
-| [6](./aulas/passo06-buffer-timeout) | Buffer e timeout | `ticks_ms()`, limite de buffer | Auto-recuperação sem reset manual |
+| [4](https://rogeriomb-hub.github.io/minicurso_02-embarcados/aulas/passo04-parsing) | Parsing com terminador | Buffer, terminador `'\n'`, `split()` | Comandos com argumento: `LED:L`, `MSG:texto` |
+| [5](https://rogeriomb-hub.github.io/minicurso_02-embarcados/aulas/passo05-maquina-estados) | Máquina de estados | FSM — IDLE / RECEBENDO / PROCESSANDO | Recepção robusta com estados explícitos |
+| [6](https://rogeriomb-hub.github.io/minicurso_02-embarcados/aulas/passo06-buffer-timeout) | Buffer e timeout | `ticks_ms()`, limite de buffer | Auto-recuperação sem reset manual |
 
 ### Fase 3 — Placa ↔ Placa (loopback)
 *Duas UARTs no mesmo ESP32, fios cruzados, comunicação de hardware real.*
 
 | Passo | Título | Conceito introduzido | Entregável |
 |-------|--------|----------------------|------------|
-| [7](./aulas/passo07-loopback) | Loopback físico | UART1 ↔ UART2, fios cruzados | Comunicação real entre duas UARTs |
-| [8](./aulas/passo08-controladora-periferica) | Controladora–Periférica | Papéis assimétricos, leitura de sensor | Protocolo `REQ:SENSOR` / `DADO:SENSOR:VALOR` |
-| [9](./aulas/passo09-checksum) | Checksum XOR | Integridade de dados, detecção de erros | Frame `PAYLOAD*XX` com verificação |
+| [7](https://rogeriomb-hub.github.io/minicurso_02-embarcados/aulas/passo07-loopback) | Loopback físico | UART1 ↔ UART2, fios cruzados | Comunicação real entre duas UARTs |
+| [8](https://rogeriomb-hub.github.io/minicurso_02-embarcados/aulas/passo08-controladora-periferica) | Controladora–Periférica | Papéis assimétricos, leitura de sensor | Protocolo `REQ:SENSOR` / `DADO:SENSOR:VALOR` |
+| [9](https://rogeriomb-hub.github.io/minicurso_02-embarcados/aulas/passo09-checksum) | Checksum XOR | Integridade de dados, detecção de erros | Frame `PAYLOAD*XX` com verificação |
 
 ### Fase 4 — Protocolo completo
 *Tudo junto: frame estruturado, ACK/NAK e retransmissão automática.*
 
 | Passo | Título | Conceito introduzido | Entregável |
 |-------|--------|----------------------|------------|
-| [10](./aulas/passo10-protocolo) | Mini-protocolo completo | SOF/EOF, ACK/NAK, retransmissão, módulo compartilhado | Frame `$TIPO:PAYLOAD*XX#` com retransmissão automática |
+| [10](https://rogeriomb-hub.github.io/minicurso_02-embarcados/aulas/passo10-protocolo) | Mini-protocolo completo | SOF/EOF, ACK/NAK, retransmissão, módulo compartilhado | Frame `$TIPO:PAYLOAD*XX#` com retransmissão automática |
 
 ---
 
